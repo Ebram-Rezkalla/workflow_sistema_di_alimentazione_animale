@@ -12,6 +12,22 @@ class AlimentoModel {
         })
         return newalimento
     }
+    //metodo modifica alimento  
+    async modificaAlimento(id:number,nomeNuovo: string){
+        //creo l'alimento e lo salvo al db con Create
+        const rowModificato=await Alimento.update({ nome: nomeNuovo }, {
+            where: {
+              id: id
+            }
+          })
+
+        return rowModificato
+    }
+
+    async getALimentoById(id:number){
+
+        const alimentoId= await Alimento.findByPk(id)
+    }
 
     /*async getAlimenti(){
         return await Alimento.findAll()
