@@ -1,11 +1,13 @@
 import { todo } from "node:test";
 import Alimento from "../db/alimento.js";
+import Scaricamento from "../db/scaricamento.js";
+import { Model } from "sequelize";
 
 //modello di alimento che mi permette ad interfacciare con il db
 class AlimentoModel {
-    //metofd per la creazione di un nuovo alimento
+    //metodo per la creazione di un nuovo alimento
     async addAlimento(nome:string,dis: number){
-        //creo l'alimento e lo salvo al db con Create
+        //creo l'alimento e lo salvo in db con Create
         const newalimento=await Alimento.create({
             nome: nome,
             disponibilità: dis
@@ -14,7 +16,7 @@ class AlimentoModel {
     }
     //metodo modifica alimento  
     async modificaAlimento(id:number,nomeNuovo: string){
-        //creo l'alimento e lo salvo al db con Create
+        //chaimo metodo update passando la chiave id dell'alimento
         const rowModificato=await Alimento.update({ nome: nomeNuovo }, {
             where: {
               id: id
@@ -24,9 +26,40 @@ class AlimentoModel {
         return rowModificato
     }
 
+    // metodo per scaricare un alimento e aggirnare la sua disponibilità
+    async scaricaAlimento(alimento: Model<any, any>,quantità: number){
+        const nuovaDis = alimento.dataValues.disponibilità + quantità //faccio la somma della quantità aggiunta e la disponibilità attuale
+         this.addOperazioneScaricamento(alimento.dataValues.id,quantità)
+         this.aggiornaDisponibilitàAlimento(alimento.dataValues.id,nuovaDis)
+    
+        return nuovaDis
+             
+        
+    }
+    //metodo per creare un nuovo scaricamento
+    async addOperazioneScaricamento(id: number,quantità: number){
+        const scaricamento=await Scaricamento.create({
+            id: id,
+            quantità_scaricata: quantità
+        })
+        return scaricamento
+
+    }
+
+    async aggiornaDisponibilitàAlimento(id:number,nuovaDis: number){
+        //chaimo metodo update passando la chiave id dell'alimento
+        await Alimento.update({ disponibilità: nuovaDis }, {
+            where: {
+              id: id
+            }
+          })
+
+    }
+    
     async getALimentoById(id:number){
 
-        const alimentoId= await Alimento.findByPk(id)
+        const alimento= await Alimento.findByPk(id)
+        return alimento
     }
 
     /*async getAlimenti(){

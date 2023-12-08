@@ -1,18 +1,18 @@
 import { JSONSchema7} from 'json-schema';
 //definizione schema per la validazione delle richiesta da parte del utente
-const alimentoSchema : JSONSchema7 = {
+const scaricoSchema : JSONSchema7 = {
     type: 'object',
-    required: ['nome', 'disponibilità'],
+    required: ['id', 'quantità'],
     properties: {
-      nome: {
-        type: 'string',
-      },
-      disponibilità: {
+      id: {
         type: 'number',
-        minimum:0
+      },
+      quantità: {
+        type: 'number',
+        minimum:0.1
       },
       
     },
   };
 
-  export default alimentoSchema;
+  export default scaricoSchema;

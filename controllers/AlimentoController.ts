@@ -4,12 +4,15 @@ import AlimentoModel from "../models/AlimentoModel.js";
 import verifyAndAuthenticate from '../auth/autenticazione.js';
 import checkHeader from '../auth/checkHeader.js';
 import alimentoSchema from '../validation/alimentoSchema.js';
-import errorhandler from '../validation/errorHandler.js';
 import { Validator } from 'express-json-validator-middleware';
 import { StatusCodes } from 'http-status-codes';
 import modificaAlimentoSchema from '../validation/modificaAlimentoSchema.js';
 import { CustomErrorTypes, errorFactory } from 'error-handler-module';
 import { json } from 'sequelize';
+import errorValidationHandler from '../validation/errorValidationHandler.js';
+import scaricoSchema from '../validation/scaricoSchema.js';
+import { RequestHandler, ParamsDictionary } from 'express-serve-static-core';
+import { ParsedQs } from 'qs';
 
 
 //classe per il controllo degli alimenti
@@ -25,8 +28,13 @@ class AlimentoController implements Controller {
     }
   
     private initializeRoutes() {
-      this.router.post(`${this.path}/add`, checkHeader ,verifyAndAuthenticate,this.validator.validate({body:alimentoSchema}),errorhandler,this.addAlimento);//rotta creazione alimento
-      this.router.patch(`${this.path}/modifica/:id`, checkHeader ,verifyAndAuthenticate,this.validator.validate({body:modificaAlimentoSchema}),errorhandler,this.modificaAlimento);
+      
+      this.router.post(`${this.path}/add`, checkHeader ,verifyAndAuthenticate,this.validator.validate({body:alimentoSchema}),errorValidationHandler,this.addAlimento);//rotta creazione alimento
+      
+      this.router.patch(`${this.path}/modifica/:id`, checkHeader ,verifyAndAuthenticate,this.validator.validate({body:modificaAlimentoSchema}),errorValidationHandler,this.modificaAlimento);// rotta modifica alimento
+      
+      this.router.post(`${this.path}/scarica`, checkHeader ,verifyAndAuthenticate,this.validator.validate({body:scaricoSchema}),errorValidationHandler,this.scaricaAlimento);//rotta scaricamento alimento
+
       //this.router.get(`${this.path}/:id/posts`, authMiddleware, this.getAllPostsOfUser);
     }
   
@@ -52,13 +60,30 @@ class AlimentoController implements Controller {
       }
       else{// altrimenti significa che l'alimento è stato modifcato corettamente
       
-      const messaggio:any = {
+      const messaggio= {
               messaggio: "alimento aggiornato corretamente",  
      }
-      res.send(JSON.stringify(messaggio));
+      res.send(messaggio);
     }
-    });  
-     
+    }); 
+    
+  }  
+
+  private scaricaAlimento=async (req: Request, res: Response,next :NextFunction) =>{
+    //cerco l'alimento con id passato dal cliente
+    this.alimento.getALimentoById(req.body.id).then((alimento)=>{
+      if (alimento){// se alimento esiste aggiungo lo scaricamento 
+        this.alimento.scaricaAlimento(alimento, req.body.quantità).then((nuovDis) => { 
+          const messaggio = {
+              messaggio: 'quantità scaricata corretamente,la nuova disponibilità è '+nuovDis+' kg',
+          };
+          res.send(messaggio); });
+      } else { //altrimenti mando errore
+        const alimentoNonEsistente = errorFactory(CustomErrorTypes.BAD_REQUEST); //creo un errore
+      res.status(StatusCodes.BAD_REQUEST).send(alimentoNonEsistente("alimento non trovato, si prega di verificare id inserito"));//invio l'errore s
+      }
+  })
+
 }
 }
   export default AlimentoController;

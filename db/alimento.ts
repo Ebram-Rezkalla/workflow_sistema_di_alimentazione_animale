@@ -17,8 +17,18 @@ const Alimento= sequelize.define('Alimento',{
     allowNull: false
 }}, {freezeTableName: true }); 
 
+const Scaricamento= sequelize.define('Scaricamento',{
+  quantità_scaricata: {
+    type: DataTypes.DOUBLE,
+    allowNull: false
+  },
+ }, {freezeTableName: true }); 
+
+ Alimento.hasMany(Scaricamento,{foreignKeyConstraint:true,foreignKey:"id",sourceKey:"id"})
+ Scaricamento.belongsTo(Alimento,{foreignKey:"id",targetKey:"id"})
+
 await Alimento.sync({ force: true });
     
 
-export default Alimento;
+export default Alimento;Scaricamento
 

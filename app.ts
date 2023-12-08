@@ -3,6 +3,7 @@ import Autenticazione from './auth/autenticazione';
 import { handleHttpError } from 'error-handler-module';
 import Controller from './interfaces/controllerInterface.js';
 import bodyParser from 'body-parser';
+import errorParsingHandler from './validation/errorParsingHandler.js';
 
 //classe che definisce l'applicazione express con middleware controllori
 class App {
@@ -28,7 +29,9 @@ class App {
       }
     
       private initializeMiddlewares() {
-        this.app.use(bodyParser.json());//bodyparsers per ricavare il body della richiesta
+        this.app.use(bodyParser.json());//bodyparsers per ricavare il body della richiestaù
+        this.app.use(errorParsingHandler);
+
       }
 
       private initializeControllers(controllers: Controller[]) {
