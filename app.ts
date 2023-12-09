@@ -4,6 +4,7 @@ import { handleHttpError } from 'error-handler-module';
 import Controller from './interfaces/controllerInterface.js';
 import bodyParser from 'body-parser';
 import errorParsingHandler from './validation/errorParsingHandler.js';
+import ConcreteMediator from './controllers/ConcreteMediator';
 
 //classe che definisce l'applicazione express con middleware controllori
 class App {
@@ -29,7 +30,7 @@ class App {
       }
     
       private initializeMiddlewares() {
-        this.app.use(bodyParser.json());//bodyparsers per ricavare il body della richiestaù
+        this.app.use(bodyParser.json());//bodyparsers per ricavare il body della richiesta
         this.app.use(errorParsingHandler);
 
       }
@@ -39,6 +40,8 @@ class App {
           this.app.use('/', controller.router);//inizializzo i controllori passandogli Router
         });
       }
+
+      
 }
     
     export default App;

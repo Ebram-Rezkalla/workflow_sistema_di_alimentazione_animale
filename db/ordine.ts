@@ -4,18 +4,15 @@ import sequelize from './connessioneSequelize.js';
 
 
 //defenisco la tabella ALimento difenedo i parametri 
-const Alimento= sequelize.define('Alimento',{
-  nome: {
+const Ordine= sequelize.define('Ordine',{
+  stato: {
     type: DataTypes.STRING,
     allowNull: false
   },
-  disponibilità: {
-    type: DataTypes.DOUBLE,
-    allowNull: false
-}}, {freezeTableName: true }); 
+  }, {freezeTableName: true }); 
 
-await Alimento.sync({ force: true });
+await Ordine.sync({ force: true });
     
 
-export default Alimento;
+export default Ordine;
 

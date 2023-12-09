@@ -1,7 +1,8 @@
 import { todo } from "node:test";
 import Alimento from "../db/alimento.js";
 import Scaricamento from "../db/scaricamento.js";
-import { Model } from "sequelize";
+import { Model, Op } from "sequelize";
+import DettagliOrdine from "./DettagliOrdine.js";
 
 //modello di alimento che mi permette ad interfacciare con il db
 class AlimentoModel {
@@ -29,8 +30,10 @@ class AlimentoModel {
     // metodo per scaricare un alimento e aggirnare la sua disponibilità
     async scaricaAlimento(alimento: Model<any, any>,quantità: number){
         const nuovaDis = alimento.dataValues.disponibilità + quantità //faccio la somma della quantità aggiunta e la disponibilità attuale
-         this.addOperazioneScaricamento(alimento.dataValues.id,quantità)
-         this.aggiornaDisponibilitàAlimento(alimento.dataValues.id,nuovaDis)
+       await this.addOperazioneScaricamento(alimento.dataValues.id,quantità).then(()=>{
+            this.aggiornaDisponibilitàAlimento(alimento.dataValues.id,nuovaDis)
+        })
+       
     
         return nuovaDis
              
@@ -39,7 +42,7 @@ class AlimentoModel {
     //metodo per creare un nuovo scaricamento
     async addOperazioneScaricamento(id: number,quantità: number){
         const scaricamento=await Scaricamento.create({
-            id: id,
+            id_alimento: id,
             quantità_scaricata: quantità
         })
         return scaricamento
@@ -60,6 +63,16 @@ class AlimentoModel {
 
         const alimento= await Alimento.findByPk(id)
         return alimento
+    }
+    //metodo che recupera una lista di id passati
+    async verificaIdAlimentiDiUnOrdine (listIdAlimentiOrdine: number[]):Promise<Model<any, any>[]>{
+        
+        return await Alimento.findAll({
+            where:{
+                id: listIdAlimentiOrdine
+            }
+        }
+        );
     }
 
     /*async getAlimenti(){

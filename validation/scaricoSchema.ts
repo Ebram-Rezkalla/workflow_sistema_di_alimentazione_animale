@@ -5,7 +5,7 @@ const scaricoSchema : JSONSchema7 = {
     required: ['id', 'quantità'],
     properties: {
       id: {
-        type: 'number',
+        type: 'integer',
       },
       quantità: {
         type: 'number',

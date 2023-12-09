@@ -8,21 +8,24 @@ import { Validator } from 'express-json-validator-middleware';
 import { StatusCodes } from 'http-status-codes';
 import modificaAlimentoSchema from '../validation/modificaAlimentoSchema.js';
 import { CustomErrorTypes, errorFactory } from 'error-handler-module';
-import { json } from 'sequelize';
+import { Model, json } from 'sequelize';
 import errorValidationHandler from '../validation/errorValidationHandler.js';
 import scaricoSchema from '../validation/scaricoSchema.js';
 import { RequestHandler, ParamsDictionary } from 'express-serve-static-core';
 import { ParsedQs } from 'qs';
+import BaseController from './BaseController.js';
+import DettagliOrdine from '../models/DettagliOrdine.js';
 
 
 //classe per il controllo degli alimenti
-class AlimentoController implements Controller {
+class AlimentoController extends BaseController implements Controller {
     public path = '/alimenti';
     public router = Router();
     private alimento = new AlimentoModel; //creo un istanza del modello alimento
     private validator =new Validator({allErrors: true});// Without allErrors: true, ajv will only return the first error
 
     constructor() {
+      super();
       this.initializeRoutes();// inizializzo le rotte
 
     }
@@ -61,7 +64,7 @@ class AlimentoController implements Controller {
       else{// altrimenti significa che l'alimento è stato modifcato corettamente
       
       const messaggio= {
-              messaggio: "alimento aggiornato corretamente",  
+              messaggio: "alimento aggiornato correttamente",  
      }
       res.send(messaggio);
     }
@@ -75,15 +78,22 @@ class AlimentoController implements Controller {
       if (alimento){// se alimento esiste aggiungo lo scaricamento 
         this.alimento.scaricaAlimento(alimento, req.body.quantità).then((nuovDis) => { 
           const messaggio = {
-              messaggio: 'quantità scaricata corretamente,la nuova disponibilità è '+nuovDis+' kg',
+              messaggio: 'quantità scaricata correttamente, la nuova disponibilità è '+nuovDis+' kg',
           };
           res.send(messaggio); });
       } else { //altrimenti mando errore
         const alimentoNonEsistente = errorFactory(CustomErrorTypes.BAD_REQUEST); //creo un errore
-      res.status(StatusCodes.BAD_REQUEST).send(alimentoNonEsistente("alimento non trovato, si prega di verificare id inserito"));//invio l'errore s
+      res.status(StatusCodes.BAD_REQUEST).send(alimentoNonEsistente("alimento non trovato, si prega di verificare id inserito"));//invio l'errore 
       }
   })
 
 }
+    //metodo che verifica la disponibilità degli alimenti prima di creare un ordine
+  public async verificaAlimentiDiUnOrdine(listIdAlimentiOrdine: number[]): Promise<Model<any, any>[]>{
+    
+    return this.alimento.verificaIdAlimentiDiUnOrdine(listIdAlimentiOrdine)
+
+    
+  }
 }
   export default AlimentoController;
