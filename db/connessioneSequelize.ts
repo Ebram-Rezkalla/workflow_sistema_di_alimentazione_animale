@@ -7,7 +7,7 @@ const sequelize = new Sequelize({
 }); //conessione al db
 
 
-    
+sequelize.sync({ force: true })
 
 export default sequelize;
 

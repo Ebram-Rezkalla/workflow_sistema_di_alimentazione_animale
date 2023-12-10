@@ -8,7 +8,7 @@ import { Validator } from 'express-json-validator-middleware';
 import { StatusCodes } from 'http-status-codes';
 import modificaAlimentoSchema from '../validation/modificaAlimentoSchema.js';
 import { CustomError, CustomErrorTypes, errorFactory } from 'error-handler-module';
-import { json } from 'sequelize';
+import { Model, json } from 'sequelize';
 import errorValidationHandler from '../validation/errorValidationHandler.js';
 import scaricoSchema from '../validation/scaricoSchema.js';
 import { RequestHandler, ParamsDictionary } from 'express-serve-static-core';
@@ -16,13 +16,15 @@ import { ParsedQs } from 'qs';
 import ordineSchema from '../validation/ordineSchema.js';
 import { todo } from 'node:test';
 import BaseController from './BaseController.js';
+import OrdineModel from '../models/OrdineModel.js';
+import DettagliOrdine from '../models/DettagliOrdine.js';
 
 
 //classe per il controllo degli ordini
 class OrdineController extends BaseController implements Controller {
     public path = '/ordini';
     public router = Router();
-   // private ordine = new OrdineModel; //creo un istanza del modello ordine
+    private ordine = new OrdineModel; //creo un istanza del modello ordine
     private validator =new Validator({allErrors: true});// Without allErrors: true, ajv will only return the first error
 
     constructor() {
@@ -35,34 +37,21 @@ class OrdineController extends BaseController implements Controller {
     private initializeRoutes() {
       
       this.router.post(`${this.path}/crea`, checkHeader ,verifyAndAuthenticate,this.validator.validate({body:ordineSchema}),
-      errorValidationHandler,this.controlloAlimentiDuplicati,this.controlloSequenza,this.controlloIdAlimenti,this.creaOrdine);//rotta creazione ordine
+      errorValidationHandler,this.controlloAlimentiDuplicati,this.controlloSequenza,this.controlloIdAlimenti,this.controlloDisponibilitàAlimenti,this.creaOrdine);//rotta creazione ordine
       
     
     }
 
+    
     //metodo per creare un nuovo ordine 
-    /*private creaOrdine=async (req: Request, res: Response,next :NextFunction) =>{
-        const listaIdAlimentiOrdine: number [] =  req.body.map((alimento: { idAlimento: number; })=>alimento.idAlimento)//salvo tutti gli id in un array
-        this.mediator.verificaIdAlimenti(listaIdAlimentiOrdine).then((listaAlimenti){})
-        
-    }*/
-
     private creaOrdine = async (req: Request, res: Response, next: NextFunction) => {
-        const listaIdAlimentiOrdine: number[] = req.body.map((alimento: { idAlimento: number; }) => alimento.idAlimento);
-
-            const listaAlimenti = await this.mediator.verificaIdAlimenti(listaIdAlimentiOrdine);
-    
-            // Trova gli ID che non esistono in listaAlimenti
-            const idMancanti = listaIdAlimentiOrdine.filter(id => !listaAlimenti.map(alimento => alimento.dataValues.id).includes(id));
-    
-            if (idMancanti.length > 0) {
-                // Gestisci gli ID mancanti
-                console.log('ID mancanti:', idMancanti);
-            } else {
-                // Tutti gli ID sono validi
-                console.log('Tutti gli ID sono validi');
-            }
-    
+        //creo oggetti di tipo DettagliOrdine 
+        const alimentiOrdine :DettagliOrdine[] = req.body.map((alimento: DettagliOrdine) => new DettagliOrdine(alimento.idAlimento, alimento.quantità_richiesta, alimento.sequenza));
+       //passo la lista al metodo addOrdine contente gli alimenti di un ordine
+       //chiamo il modello di ordine per creare un nuovo ordine e aggiungerlo al db
+       this.ordine.addOrdine(alimentiOrdine).then((result)=>{
+        this.mediator.aggiornaQuantitàRiservata(alimentiOrdine)
+        res.status(StatusCodes.CREATED).send(result);}); 
         
     };
     
@@ -75,7 +64,7 @@ class OrdineController extends BaseController implements Controller {
         }else
         next()
     }
-    //metodo per controllare se l'utente ha repetuto l'alimento due volte in un ordine
+    //metodo per controllare se l'utente ha repetuto l'alimento due volte in un Ordine
     private controlloAlimentiDuplicati=(req: Request, res: Response,next :NextFunction):void =>{
         const IDArray: number [] =  req.body.map((alimento: { idAlimento: number; })=>alimento.idAlimento)//salvo tutte le sequenze in un array
         if(this.haDuplicati(IDArray)){ //controllo che non ci sia un numero ripetuto due volte  nella sequenza
@@ -86,23 +75,44 @@ class OrdineController extends BaseController implements Controller {
 
         //metodo che verifica se gli id ricevuti dal cliente sono validi
     private controlloIdAlimenti= async (req: Request, res: Response,next :NextFunction):Promise<void> =>{
+
         const listaIdAlimentiOrdine: number[] = req.body.map((alimento: { idAlimento: number; }) => alimento.idAlimento);//mappo id in una lista di numeri
-            //comunico con alimento controller tramite mediator per chiedergli di verificare la lista di id 
-            const listaAlimenti = await this.mediator.verificaIdAlimenti(listaIdAlimentiOrdine); 
+            //comunico con alimento controller tramite mediator per chiedergli la lista degli alimenti
+            const listaAlimenti = await this.mediator.getAlimentiDaAlimentoController(listaIdAlimentiOrdine); 
             //mediator mi restituisce la lista degli id trovati nel sistema 
             const idMancanti = listaIdAlimentiOrdine.filter(id => !listaAlimenti.map(alimento => alimento.dataValues.id).includes(id));// Trovo gli ID che non esistono in listaAlimenti
+
             //se ci sono id non validi mando un errore al cliente
             if (idMancanti.length > 0) {
-                const alimentiNonTrovati = errorFactory(CustomErrorTypes.BAD_REQUEST); //creo un errore
-                res.status(StatusCodes.BAD_REQUEST).send(alimentiNonTrovati("i seguenti ID di alimenti non sono presenti nel sistema : "+ idMancanti))
+                const idMancantiOrdinata = idMancanti.slice().sort((a , b) => a - b);//metto la lista in ordine 
+                const messaggioErrore = "i seguenti ID di alimenti non sono presenti nel sistema: " + idMancantiOrdinata.map((idMancante: number) => `ID: ${idMancante}`).join(', ');
+                this.inviaErrore(StatusCodes.BAD_REQUEST,CustomErrorTypes.BAD_REQUEST,messaggioErrore,res)
             } else {//altrimenti passo al middleware seguente
-                next()
+                next(listaAlimenti)
             }
     }
-            
+        //metodo per controllare la disponibilità degli alimenti 
+    private controlloDisponibilitàAlimenti = async ( listaAlimenti:  Model<any, any>[],req: Request, res: Response, next: NextFunction) => {
+        //filtro in base al ID e se la disponibilità è minore cosi da creare una lista di alimenti insufficiente
+        const alimentiInsufficienti = (await listaAlimenti).filter(alimento => {
+            const richiestaCorrispondente = req.body.find((alimentoRichiesto: { idAlimento: number; quantità_richiesta: number; }) => alimentoRichiesto.idAlimento === alimento.dataValues.id);
+    
+            // Controllo se l'alimento è insufficiente
+            return richiestaCorrispondente &&  richiestaCorrispondente.quantità_richiesta> alimento.dataValues.disponibilità - alimento.dataValues.quantità_riservata;//quantità riservata è la quantità di un alimento riservata da altri ordini
+        });
+    
+        if (alimentiInsufficienti.length > 0) {
+            const messaggioErrore = `La disponibilità di alcuni alimenti è insufficiente: ${alimentiInsufficienti.map(alimento => `ID: ${alimento.dataValues.id}`).join(', ')}`;
+            this.inviaErrore(StatusCodes.BAD_REQUEST, CustomErrorTypes.BAD_REQUEST, messaggioErrore, res);
+        } else {
+            next();
+        }
+    };
+     
     //metodo per controllare che non ci sono due numeri duplicati in una lista
     private haDuplicati=(lista: number[]):boolean =>{ return new Set(lista).size < lista.length}
-
+    
+    // metodo per creare un errore e inviarlo 
     private inviaErrore=(statusCode:number ,tipoErrore: string, messaggio: string, res:Response):void=>{ res.status(statusCode).send(errorFactory(tipoErrore)(messaggio))}
 
 }

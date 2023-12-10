@@ -3,7 +3,7 @@ import sequelize from './connessioneSequelize.js';
 
 
 
-//defenisco la tabella ALimento difenedo i parametri 
+//defenisco la tabella ALimento difenendo i parametri 
 const Alimento= sequelize.define('Alimento',{
   nome: {
     type: DataTypes.STRING,
@@ -12,9 +12,19 @@ const Alimento= sequelize.define('Alimento',{
   disponibilità: {
     type: DataTypes.DOUBLE,
     allowNull: false
-}}, {freezeTableName: true }); 
+},
+  quantità_riservata: {
+  type: DataTypes.DOUBLE,
+  allowNull: false,
+  defaultValue: 0  // Imposto il valore predefinito a 0
 
-await Alimento.sync({ force: true });
+  }
+}, {
+  freezeTableName: true,
+  timestamps: false, 
+}); 
+
+//await Alimento.sync({ force: true });
     
 
 export default Alimento;

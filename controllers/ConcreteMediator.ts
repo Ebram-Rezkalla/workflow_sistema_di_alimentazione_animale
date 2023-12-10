@@ -30,11 +30,17 @@ class ConcreteMediator implements Mediator {
             this.component2.doC();
         }*/
     }
-        //metodo che verifica se gli id ricevuti dal cliente sono validi
-    public async verificaIdAlimenti(ListaIdAlimentiOrdine: number[]):Promise<Model<any, any>[]> {
+        //metodo recupera gli alimenti 
+    public async getAlimentiDaAlimentoController(ListaIdAlimentiOrdine: number[]):Promise<Model<any, any>[]> {
         
-        return this.alimentoController.verificaAlimentiDiUnOrdine(ListaIdAlimentiOrdine)
+        return this.alimentoController.getAlimenti(ListaIdAlimentiOrdine)
      }
+
+     public aggiornaQuantitàRiservata(alimentiOrdine: DettagliOrdine[]):void{
+
+        this.alimentoController.aggiornaQuantitàRiservata(alimentiOrdine);
+     }
+
 }
 
 export default ConcreteMediator;

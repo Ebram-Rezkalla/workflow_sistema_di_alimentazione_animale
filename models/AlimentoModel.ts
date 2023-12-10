@@ -6,6 +6,7 @@ import DettagliOrdine from "./DettagliOrdine.js";
 
 //modello di alimento che mi permette ad interfacciare con il db
 class AlimentoModel {
+    
     //metodo per la creazione di un nuovo alimento
     async addAlimento(nome:string,dis: number){
         //creo l'alimento e lo salvo in db con Create
@@ -29,13 +30,10 @@ class AlimentoModel {
 
     // metodo per scaricare un alimento e aggirnare la sua disponibilità
     async scaricaAlimento(alimento: Model<any, any>,quantità: number){
-        const nuovaDis = alimento.dataValues.disponibilità + quantità //faccio la somma della quantità aggiunta e la disponibilità attuale
-       await this.addOperazioneScaricamento(alimento.dataValues.id,quantità).then(()=>{
-            this.aggiornaDisponibilitàAlimento(alimento.dataValues.id,nuovaDis)
-        })
+       await this.addOperazioneScaricamento(alimento.dataValues.id,quantità)
+       await this.aggiornaDisponibilitàAlimento(alimento.dataValues.id,quantità)
        
-    
-        return nuovaDis
+        return await this.getALimentoById(alimento.dataValues.id)
              
         
     }
@@ -43,7 +41,8 @@ class AlimentoModel {
     async addOperazioneScaricamento(id: number,quantità: number){
         const scaricamento=await Scaricamento.create({
             id_alimento: id,
-            quantità_scaricata: quantità
+            quantità_scaricata: quantità,
+            data: new Date()
         })
         return scaricamento
 
@@ -51,7 +50,7 @@ class AlimentoModel {
 
     async aggiornaDisponibilitàAlimento(id:number,nuovaDis: number){
         //chaimo metodo update passando la chiave id dell'alimento
-        await Alimento.update({ disponibilità: nuovaDis }, {
+        await Alimento.increment({ disponibilità: nuovaDis }, {
             where: {
               id: id
             }
@@ -65,7 +64,7 @@ class AlimentoModel {
         return alimento
     }
     //metodo che recupera una lista di id passati
-    async verificaIdAlimentiDiUnOrdine (listIdAlimentiOrdine: number[]):Promise<Model<any, any>[]>{
+    async getAlimenti (listIdAlimentiOrdine: number[]):Promise<Model<any, any>[]>{
         
         return await Alimento.findAll({
             where:{
@@ -74,10 +73,17 @@ class AlimentoModel {
         }
         );
     }
-
-    /*async getAlimenti(){
-        return await Alimento.findAll()
-  }*/
-  
+        //metodo che aggiorna la quantità riservata di ogni alimento contenuto in un ordine all'atto della sua creazione 
+        async aggiornaQuantitàRiservata(alimentiOrdine: DettagliOrdine[]): Promise<void> {
+            const updatePromises = alimentiOrdine.map(async alimento => {
+                await Alimento.increment(
+                    'quantità_riservata',
+                    { by: alimento.quantità_richiesta, where: { id: alimento.idAlimento } }
+                );
+            });
+        
+        }
+        
+        
 }
   export default AlimentoModel;

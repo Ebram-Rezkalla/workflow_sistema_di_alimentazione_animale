@@ -10,18 +10,29 @@ const Scaricamento= sequelize.define('Scaricamento',{
   
   id_alimento: {
     type: DataTypes.INTEGER,
-    allowNull: false
-  },
+    references: {
+        model: Alimento, 
+        key: 'id'
+      },
+    allowNull: false,
+},
   quantità_scaricata: {
     type: DataTypes.DOUBLE,
     allowNull: false
   },
- }, {freezeTableName: true }); 
+  data:{
+    type:DataTypes.DATEONLY,
+    allowNull: false 
+  }
+ }, {
+  freezeTableName: true,
+  timestamps: false,  
+}); 
 
  //Alimento.hasMany(Scaricamento)
 //Scaricamento.belongsToMany(Alimento,{ through: 'Scaricamento' })
 
-await Scaricamento.sync({ force: true });
+//await Scaricamento.sync({ force: true });
     
 
 export default Scaricamento;

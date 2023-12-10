@@ -5,15 +5,15 @@ import Alimento from './alimento.js';
 
 
 
-//defenisco la tabella ALimento difenedo i parametri 
+//defenisco la tabella dettagliOrdine che avrà gli alimenti contenuti in un ordine
 const dettagliOrdine= sequelize.define('dettagliOrdine',{
     OrdineId: {
         type: DataTypes.INTEGER,
         references: {
             model: Ordine, 
-            key: 'id'
+            key: 'id',
           },
-        allowNull: false
+        allowNull: false,
     },
     AlimentoId: {
         type: DataTypes.INTEGER,
@@ -21,9 +21,9 @@ const dettagliOrdine= sequelize.define('dettagliOrdine',{
             model: Alimento, 
             key: 'id'
           },
-        allowNull: false
+        allowNull: false,
     },
-    quantità_desiderata: {
+    quantità_richiesta: {
     type: DataTypes.DOUBLE,
     allowNull: false
      },
@@ -33,11 +33,16 @@ const dettagliOrdine= sequelize.define('dettagliOrdine',{
   },
   caricato: {
     type: DataTypes.BOOLEAN,
-    allowNull: false
+    allowNull: false,
+    defaultValue: false  // Imposto il valore predefinito a 0
   },
-  }, {freezeTableName: true }); 
+  }, {
+    freezeTableName: true, 
+    timestamps: false, 
+     
+  }); 
 
-await dettagliOrdine.sync({ force: true });
+//await dettagliOrdine.sync({ force: true });
     
 Ordine.belongsToMany(Alimento,{through: dettagliOrdine})
 Alimento.belongsToMany(Ordine,{through: dettagliOrdine})

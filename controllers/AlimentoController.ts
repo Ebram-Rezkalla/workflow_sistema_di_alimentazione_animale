@@ -19,6 +19,7 @@ import DettagliOrdine from '../models/DettagliOrdine.js';
 
 //classe per il controllo degli alimenti
 class AlimentoController extends BaseController implements Controller {
+    
     public path = '/alimenti';
     public router = Router();
     private alimento = new AlimentoModel; //creo un istanza del modello alimento
@@ -76,9 +77,9 @@ class AlimentoController extends BaseController implements Controller {
     //cerco l'alimento con id passato dal cliente
     this.alimento.getALimentoById(req.body.id).then((alimento)=>{
       if (alimento){// se alimento esiste aggiungo lo scaricamento 
-        this.alimento.scaricaAlimento(alimento, req.body.quantità).then((nuovDis) => { 
+        this.alimento.scaricaAlimento(alimento, req.body.quantità).then((alimento) => { 
           const messaggio = {
-              messaggio: 'quantità scaricata correttamente, la nuova disponibilità è '+nuovDis+' kg',
+              messaggio: 'quantità scaricata correttamente, la nuova disponibilità è '+alimento?.dataValues.disponibilità+' kg',
           };
           res.send(messaggio); });
       } else { //altrimenti mando errore
@@ -88,12 +89,15 @@ class AlimentoController extends BaseController implements Controller {
   })
 
 }
-    //metodo che verifica la disponibilità degli alimenti prima di creare un ordine
-  public async verificaAlimentiDiUnOrdine(listIdAlimentiOrdine: number[]): Promise<Model<any, any>[]>{
+    //metodo che recupera gli alimenti 
+  public async getAlimenti(listIdAlimentiOrdine: number[]): Promise<Model<any, any>[]>{
     
-    return this.alimento.verificaIdAlimentiDiUnOrdine(listIdAlimentiOrdine)
-
-    
+    return this.alimento.getAlimenti(listIdAlimentiOrdine)
   }
+
+
+  aggiornaQuantitàRiservata(alimentiOrdine: DettagliOrdine[]):void {
+    this.alimento.aggiornaQuantitàRiservata(alimentiOrdine)
+}
 }
   export default AlimentoController;

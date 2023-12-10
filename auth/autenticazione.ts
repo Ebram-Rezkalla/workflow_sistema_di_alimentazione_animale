@@ -1,8 +1,9 @@
 
 import { NextFunction, Response,Request,ErrorRequestHandler } from 'express';
 import { StatusCodes } from 'http-status-codes';
-import jwt from 'jsonwebtoken';
+import jwt, { Secret } from 'jsonwebtoken';
 import 'dotenv/config';
+import { env } from 'node:process';
 
 // verifico l'autenticazione
 
@@ -11,7 +12,8 @@ import 'dotenv/config';
       if(typeof bearerHeader!=='undefined'){
           const bearerToken = bearerHeader.split(' ')[1];
           try {
-            jwt.verify(bearerToken, 'supersecretkey');
+            const jwtSecret:any = process.env.JWT_SECRET;
+            jwt.verify(bearerToken, jwtSecret);
             next();
           } catch (error) {
             res.status(StatusCodes.UNAUTHORIZED).send({"error": error});

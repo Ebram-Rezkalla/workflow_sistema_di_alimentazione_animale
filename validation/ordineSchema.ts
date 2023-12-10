@@ -2,6 +2,7 @@ import { JSONSchema7} from 'json-schema';
 //definizione schema per la validazione delle richiesta da parte del utente
 const ordineSchema : JSONSchema7 = {
   type: "array",
+  minItems: 1,  
   items: {
     type: "object",
     properties: {
