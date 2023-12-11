@@ -12,34 +12,28 @@ class ConcreteMediator implements Mediator {
 
     constructor(alimentoController: AlimentoController, ordineController: OrdineController) {
         
-        this.alimentoController = alimentoController;
-        this.alimentoController.setMediator(this);
+        this.alimentoController = alimentoController; 
+        this.alimentoController.setMediator(this);//setto il mediatore del contollore
         this.ordineController = ordineController;
-        this.ordineController.setMediator(this);
+        this.ordineController.setMediator(this);//setto il mediatore del contollore
     }
 
-    public notify(sender: object, event: string): void {
-       /* if (event === 'A') {
-            console.log('Mediator reacts on A and triggers following operations:');
-            this.component2.doC();
-        }
-
-        if (event === 'D') {
-            console.log('Mediator reacts on D and triggers following operations:');
-            this.component1.doB();
-            this.component2.doC();
-        }*/
-    }
+    
         //metodo recupera gli alimenti 
     public async getAlimentiDaAlimentoController(ListaIdAlimentiOrdine: number[]):Promise<Model<any, any>[]> {
         
         return this.alimentoController.getAlimenti(ListaIdAlimentiOrdine)
      }
-
+        //metodo che aggiorna la quantità riservata di una lista di alimenti
      public aggiornaQuantitàRiservata(alimentiOrdine: DettagliOrdine[]):void{
 
         this.alimentoController.aggiornaQuantitàRiservata(alimentiOrdine);
      }
+     //metodo che notifica il caricamento di un alimento al classe AlimentoController
+     public notifyCaricamento(idAlimento:number,quantità_caricata:number,quantità_richiesta:number ):void{
+        this.alimentoController.aggiornaQuantitàRiservataAndDisponibilità(idAlimento,quantità_caricata,quantità_richiesta)
+     }
+
 
 }
 

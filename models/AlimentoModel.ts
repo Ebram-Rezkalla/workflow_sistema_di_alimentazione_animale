@@ -47,7 +47,7 @@ class AlimentoModel {
         return scaricamento
 
     }
-
+    //metodo che aggiorna la disponibilità di un alimento
     async aggiornaDisponibilitàAlimento(id:number,nuovaDis: number){
         //chaimo metodo update passando la chiave id dell'alimento
         await Alimento.increment({ disponibilità: nuovaDis }, {
@@ -74,15 +74,31 @@ class AlimentoModel {
         );
     }
         //metodo che aggiorna la quantità riservata di ogni alimento contenuto in un ordine all'atto della sua creazione 
-        async aggiornaQuantitàRiservata(alimentiOrdine: DettagliOrdine[]): Promise<void> {
-            const updatePromises = alimentiOrdine.map(async alimento => {
-                await Alimento.increment(
-                    'quantità_riservata',
-                    { by: alimento.quantità_richiesta, where: { id: alimento.idAlimento } }
-                );
-            });
+    async aggiornaQuantitàRiservata(alimentiOrdine: DettagliOrdine[]): Promise<void> {
+        alimentiOrdine.map(async alimento => {
+            await Alimento.increment(
+                'quantità_riservata',
+                { by: alimento.quantità_richiesta, where: { id: alimento.idAlimento } }
+            );
+        });
         
-        }
+    }
+    //metodo che aggiorna sia la disponibilità che la quantità riservata di un alimento
+    async aggiornaQuantitàRiservataAndDisponibilità(id: number, quantità_caricata:number,quantità_richiesta:number) {
+        // Chiamo il metodo update passando la chiave id dell'alimento
+        await Alimento.increment(
+            {
+                disponibilità: quantità_caricata,
+                quantità_riservata: quantità_richiesta
+            },
+            {
+                where: {
+                    id: id
+                }
+            }
+        );
+
+    }
         
         
 }

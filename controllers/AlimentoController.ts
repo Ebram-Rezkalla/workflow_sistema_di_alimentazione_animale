@@ -20,6 +20,7 @@ import DettagliOrdine from '../models/DettagliOrdine.js';
 //classe per il controllo degli alimenti
 class AlimentoController extends BaseController implements Controller {
     
+    
     public path = '/alimenti';
     public router = Router();
     private alimento = new AlimentoModel; //creo un istanza del modello alimento
@@ -49,8 +50,7 @@ class AlimentoController extends BaseController implements Controller {
   }*/
     //metodo per creare un nuovo alimento
     private addAlimento=async (req: Request, res: Response,next :NextFunction) =>{
-      console.log(req.body);
-      //
+      
       this.alimento.addAlimento(req.body.nome,req.body.disponibilità).then((result)=>{res.status(StatusCodes.CREATED).send(result);}); //chiamo il modello di alimentazione per aggiungere alimento al db
 
   }
@@ -72,7 +72,7 @@ class AlimentoController extends BaseController implements Controller {
     }); 
     
   }  
-
+    //metodo per lo scarico di un alimento
   private scaricaAlimento=async (req: Request, res: Response,next :NextFunction) =>{
     //cerco l'alimento con id passato dal cliente
     this.alimento.getALimentoById(req.body.id).then((alimento)=>{
@@ -95,9 +95,14 @@ class AlimentoController extends BaseController implements Controller {
     return this.alimento.getAlimenti(listIdAlimentiOrdine)
   }
 
-
+    //metodo che aggiorna la quantità riservata di una lista di alimenti
   aggiornaQuantitàRiservata(alimentiOrdine: DettagliOrdine[]):void {
     this.alimento.aggiornaQuantitàRiservata(alimentiOrdine)
 }
+  //metodo che aggiorna sia la disponibilità che la quantità riservata di alimento e questo metodo vine invocato all'atto del caricamento di un alimento
+  aggiornaQuantitàRiservataAndDisponibilità(idAlimento: number, quantità_caricata: number,quantità_richiesta:number) {
+    this.alimento.aggiornaQuantitàRiservataAndDisponibilità(idAlimento, quantità_caricata,quantità_richiesta)
+
+  }
 }
   export default AlimentoController;

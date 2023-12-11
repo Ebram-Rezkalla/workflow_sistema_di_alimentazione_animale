@@ -2,7 +2,8 @@ enum StatoOrdine {
     Creato = 'CREATO',
     Fallito = 'FALLITO',
     InEsecuzione = 'IN ESECUZIONE',
-    Completato = 'Annullato',
+    Completato = 'COMPLETATO',
 }
 
 export default StatoOrdine;
+

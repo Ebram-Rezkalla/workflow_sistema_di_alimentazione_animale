@@ -7,8 +7,8 @@ import alimentoSchema from '../validation/alimentoSchema.js';
 import { Validator } from 'express-json-validator-middleware';
 import { StatusCodes } from 'http-status-codes';
 import modificaAlimentoSchema from '../validation/modificaAlimentoSchema.js';
-import { CustomError, CustomErrorTypes, errorFactory } from 'error-handler-module';
-import { Model, json } from 'sequelize';
+import { CustomErrorTypes, errorFactory } from 'error-handler-module';
+import { Model, Sequelize, json } from 'sequelize';
 import errorValidationHandler from '../validation/errorValidationHandler.js';
 import scaricoSchema from '../validation/scaricoSchema.js';
 import { RequestHandler, ParamsDictionary } from 'express-serve-static-core';
@@ -18,13 +18,17 @@ import { todo } from 'node:test';
 import BaseController from './BaseController.js';
 import OrdineModel from '../models/OrdineModel.js';
 import DettagliOrdine from '../models/DettagliOrdine.js';
+import StatoOrdine from '../models/StatoOrdine.js';
+import presaInCaricoSchema from '../validation/presaInCaricoSchema.js';
+import caricoSchema from '../validation/caricoSchema.js';
+import dettagliOrdine from '../db/dettagliOrdine.js';
 
 
 //classe per il controllo degli ordini
 class OrdineController extends BaseController implements Controller {
     public path = '/ordini';
     public router = Router();
-    private ordine = new OrdineModel; //creo un istanza del modello ordine
+    private ordine= new OrdineModel; //creo un istanza del modello ordine
     private validator =new Validator({allErrors: true});// Without allErrors: true, ajv will only return the first error
 
     constructor() {
@@ -34,13 +38,20 @@ class OrdineController extends BaseController implements Controller {
 
     }
   
-    private initializeRoutes() {
+    private async initializeRoutes() {
       
       this.router.post(`${this.path}/crea`, checkHeader ,verifyAndAuthenticate,this.validator.validate({body:ordineSchema}),
       errorValidationHandler,this.controlloAlimentiDuplicati,this.controlloSequenza,this.controlloIdAlimenti,this.controlloDisponibilitàAlimenti,this.creaOrdine);//rotta creazione ordine
       
+      this.router.post(`${this.path}/presa-in-carico`, checkHeader ,verifyAndAuthenticate,this.validator.validate({body:presaInCaricoSchema}),
+      errorValidationHandler,this.controlloIdOrdine,this.presaInCaricoOrdine);
+
+      this.router.post(`${this.path}/carica`, checkHeader ,verifyAndAuthenticate,this.validator.validate({body:caricoSchema}),
+      errorValidationHandler,this.controlloIdOrdine,this.controlloAlimento,this.controlloStatoCaricamento,this.controlloSequenzaDiCarico,
+      this.controlloQuantitàCaricata,this.caricaAlimentoDiUnOrdine,this.controlloCompletamentoOrdine);
     
     }
+    
 
     
     //metodo per creare un nuovo ordine 
@@ -100,7 +111,7 @@ class OrdineController extends BaseController implements Controller {
             // Controllo se l'alimento è insufficiente
             return richiestaCorrispondente &&  richiestaCorrispondente.quantità_richiesta> alimento.dataValues.disponibilità - alimento.dataValues.quantità_riservata;//quantità riservata è la quantità di un alimento riservata da altri ordini
         });
-    
+
         if (alimentiInsufficienti.length > 0) {
             const messaggioErrore = `La disponibilità di alcuni alimenti è insufficiente: ${alimentiInsufficienti.map(alimento => `ID: ${alimento.dataValues.id}`).join(', ')}`;
             this.inviaErrore(StatusCodes.BAD_REQUEST, CustomErrorTypes.BAD_REQUEST, messaggioErrore, res);
@@ -108,6 +119,139 @@ class OrdineController extends BaseController implements Controller {
             next();
         }
     };
+    //metodo per prendere in carico un ordine
+    private presaInCaricoOrdine=(req: Request, res: Response, next: NextFunction )=>{
+
+        const risposta= this.ordine.presaInCarico()//se il model mio risponde con una stringa la rinvio al cliente
+            if (typeof risposta === 'string'){
+                const messaggio = {
+                    messaggio: risposta
+                };
+                res.send(messaggio)
+            }else //altrimenti invio l'errore restituito
+                res.status(StatusCodes.BAD_REQUEST).send(risposta)
+    }
+    //metodo che controlla se ID dell'ordine è corretto
+    private controlloIdOrdine= async (req: Request, res: Response, next: NextFunction)=>{
+        //il metodo inizializzaStato fa una chiamata al db con id dell'ordine poi imposta gli attributi id e stato della classe OrdineModel
+        this.ordine.inizializzaStato(req.body.id).then((ordine)=>{
+            if(ordine){
+                next()
+            }else{
+                const messaggioErrore= "ordine non trovato, si prega di verificare id inserito"
+                this.inviaErrore(StatusCodes.BAD_REQUEST,CustomErrorTypes.BAD_REQUEST,messaggioErrore,res)
+            }
+        })
+    }
+    //metodo che verifica se l'alimento esiste nella lista dell'ordine
+    private controlloAlimento = async (req: Request, res: Response, next: NextFunction)=>{
+
+        const risposta=await this.ordine.controlloAlimento(req.body.idAlimento)//in base allo stato dell'ordine ottengo la risposta
+            if ( typeof risposta === 'string'){//nel caso che una stringa allora l'ordine non è IN ESECUZIONE oppure l'alimento non è presente nell'ordine
+                this.inviaErrore(StatusCodes.BAD_REQUEST,CustomErrorTypes.BAD_REQUEST,risposta,res)
+
+            }else{
+                next(risposta)
+                
+            }
+
+    
+        
+    }
+    //metodo che controlla se l'alimento è stato caricato o meno
+    private controlloStatoCaricamento = async (alimentoOrdine: Model<any,any>,req: Request, res: Response, next: NextFunction)=>{
+        if(alimentoOrdine.dataValues.caricato) {
+            const messaggioErrore= "L'alimento è stato già caricato"
+            this.inviaErrore(StatusCodes.BAD_REQUEST,CustomErrorTypes.BAD_REQUEST,messaggioErrore,res)
+        } 
+        else
+            next(alimentoOrdine)
+    }
+
+    //metodo per controllare la sequenza di carico
+    private controlloSequenzaDiCarico = async (alimentoOrdine: Model<any, any>, req: Request, res: Response, next: NextFunction) => {
+            //controllo se l'alimento che precede (nella sequenza di carico) l'alimento da caricare è stato caricato o meno
+            this.ordine.getAlimentoOrdineConSequenza( alimentoOrdine.dataValues.sequenza - 1).then((alimentoSequenzaPrecedente)=>{
+            //se l'alimento da caricare era il primo nella sequenza di carico allora  if non sarà verificata
+            //se non è il primo nella sequenza di carico e l'alimento precedente  è stato caricato if non sarà verificata 
+            //invece se non è il primo nella sequenza di carico e l'alimento precedente non è stato caricato if sarà verificata 
+            if (alimentoSequenzaPrecedente && !alimentoSequenzaPrecedente.dataValues.caricato) {
+                const messaggioErrore = "L'ordine è fallito in quanto non è stata rispettata la sequenza di carico";
+                this.fallimentoOrdine(messaggioErrore,res)
+            } else {
+                next(alimentoOrdine);
+            }
+        })
+        
+    };
+
+    //metodo per verificare se la quanità caricata devia da una data tolleranza
+    private controlloQuantitàCaricata = async (alimentoOrdine: Model<any, any>,req: Request, res: Response, next: NextFunction) => {
+
+            const quantitàRichiesta = alimentoOrdine.dataValues.quantità_richiesta;
+            const quantitàCaricata = req.body.quantità_caricata;
+    
+            const percentualeTolleranza:any  = process.env.N;
+    
+            const differenzaPercentuale = Math.abs((quantitàCaricata - quantitàRichiesta) / quantitàRichiesta) * 100;
+    
+            if (differenzaPercentuale > percentualeTolleranza) {
+                const messaggioErrore = `L'ordine è fallito perché la quantità caricata è fuori dalla tolleranza consentita `;
+                this.fallimentoOrdine(messaggioErrore,res)
+            } else {
+                next(alimentoOrdine);
+            }
+    };
+
+    //metodo per gestire il caricamento di alimento
+    private caricaAlimentoDiUnOrdine=async(alimentoOrdine: Model<any, any>,req: Request, res: Response, next: NextFunction)=>{
+
+            this.ordine.addOperazioneCaricamento(req.body.idAlimento,req.body.quantità_caricata) //aggiungo un'operazione di caricamento al db
+            this.ordine.changeToCaricatoStatoAlimento(req.body.idAlimento)// cambio lo stato dell'alimento a caricato= true
+            this.mediator.notifyCaricamento(req.body.idAlimento,- req.body.quantità_caricata,-alimentoOrdine.dataValues.quantità_richiesta)//invio una notifica a AlimentoController per aggiornare la disponibilità e la quantità riservata
+            const messaggio: { messaggio: string } = {
+                messaggio: "Caricato " + req.body.quantità_caricata + " Kg di Alimento ID: " + req.body.idAlimento + " relativo all'ordine ID: " + req.body.id
+            };
+            next(messaggio)
+    }
+        //metodo per controllare se gli alimenti dell'ordine sono stati tutti caricati e di sequenza aggiornare lo stato dell'ordine a Completato 
+        private controlloCompletamentoOrdine = async (caricamentoRes: { messaggio: string,statoOrdine?:string}, req: Request, res: Response, next: NextFunction) => {
+            const alimentiOrdine = await this.ordine.getAlimentiOrdine();
+        
+            // Verifico se tutti gli alimenti sono caricati
+            const tuttiCaricati = alimentiOrdine.every((alimento) => alimento.dataValues.caricato);
+        
+            if (tuttiCaricati) {
+                // Se tutti gli alimenti sono caricati, aggiorno lo stato dell'ordine
+                const risposta = this.ordine.aggiornaStatoOrdineCompletato();
+                if(typeof risposta==='string'){
+                    caricamentoRes.statoOrdine=risposta;
+                    res.send(caricamentoRes);
+                }else
+                res.status(StatusCodes.BAD_REQUEST).send(risposta)
+            } else{
+                res.send(caricamentoRes)
+            }
+
+        }
+        //metodo per gestire il fallimento di un ordine
+    private async fallimentoOrdine(messaggioErrore: string, res:Response){
+
+
+        const alimentiDaLiberareQuantità = await this.ordine.getAlimentiOrdineDaLiberare(); // Ricavo gli alimenti dell'ordine che non sono ancora stati caricati così da liberare le quantità riservate in quanto è fallito 
+        const ListaAlimentiDaLiberareQuantità: DettagliOrdine[] = alimentiDaLiberareQuantità.map((alimento: Model<any, any>) =>
+            new DettagliOrdine(alimento.dataValues.AlimentoId, -alimento.dataValues.quantità_richiesta, alimento.dataValues.sequenza)
+        ); //mappo gli alimenti in un oggetto di tipo DettagliOrdine aggiungendo il meno davanti alla quantità richiesta
+            console.log(ListaAlimentiDaLiberareQuantità)
+        this.mediator.aggiornaQuantitàRiservata(ListaAlimentiDaLiberareQuantità)//avviso la classe AlimentoController per libera le quantità riservate dall'ordine che è diventato fallito
+
+        await this.ordine.aggiornaStatoOrdineToFallito();//aggiorno lo stato dell'ordine
+
+        this.inviaErrore(StatusCodes.BAD_REQUEST, CustomErrorTypes.BAD_REQUEST, messaggioErrore, res);
+
+    }
+    
+    
      
     //metodo per controllare che non ci sono due numeri duplicati in una lista
     private haDuplicati=(lista: number[]):boolean =>{ return new Set(lista).size < lista.length}
