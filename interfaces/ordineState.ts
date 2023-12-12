@@ -6,6 +6,7 @@ interface OrdineState {
     aggiornaStatoOrdineToFallito():any;
 
     aggiornaStatoOrdineCompletato():any;
+    getStatoOrdine():any
   }
 
   export default OrdineState;

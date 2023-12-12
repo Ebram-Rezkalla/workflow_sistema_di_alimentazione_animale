@@ -28,7 +28,7 @@ const Caricamento= sequelize.define('Caricamento',{
     allowNull: false
      },
     data_caricamento: {
-    type: DataTypes.DATEONLY,
+    type: DataTypes.DATE,
     allowNull: false
   },
   }, {

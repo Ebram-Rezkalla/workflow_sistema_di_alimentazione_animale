@@ -49,6 +49,8 @@ class OrdineController extends BaseController implements Controller {
       this.router.post(`${this.path}/carica`, checkHeader ,verifyAndAuthenticate,this.validator.validate({body:caricoSchema}),
       errorValidationHandler,this.controlloIdOrdine,this.controlloAlimento,this.controlloStatoCaricamento,this.controlloSequenzaDiCarico,
       this.controlloQuantitàCaricata,this.caricaAlimentoDiUnOrdine,this.controlloCompletamentoOrdine);
+
+      this.router.get(`${this.path}/stato/:id`, checkHeader ,verifyAndAuthenticate,this.controlloIdOrdine, this.getStatoOrdine);
     
     }
     
@@ -132,17 +134,26 @@ class OrdineController extends BaseController implements Controller {
                 res.status(StatusCodes.BAD_REQUEST).send(risposta)
     }
     //metodo che controlla se ID dell'ordine è corretto
-    private controlloIdOrdine= async (req: Request, res: Response, next: NextFunction)=>{
-        //il metodo inizializzaStato fa una chiamata al db con id dell'ordine poi imposta gli attributi id e stato della classe OrdineModel
-        this.ordine.inizializzaStato(req.body.id).then((ordine)=>{
-            if(ordine){
-                next()
-            }else{
-                const messaggioErrore= "ordine non trovato, si prega di verificare id inserito"
-                this.inviaErrore(StatusCodes.BAD_REQUEST,CustomErrorTypes.BAD_REQUEST,messaggioErrore,res)
-            }
-        })
+    private controlloIdOrdine = async (req: Request, res: Response, next: NextFunction) => {
+        const idOrdine = req.body.id || req.params.id;
+    
+        if (!idOrdine) {
+            const messaggioErrore = "ID dell'ordine non fornito.";
+            this.inviaErrore(StatusCodes.BAD_REQUEST, CustomErrorTypes.BAD_REQUEST, messaggioErrore, res);
+        } else {
+            // Il metodo inizializzaStato fa una chiamata al db con id dell'ordine
+            // poi imposta gli attributi id e stato della classe OrdineModel
+            this.ordine.inizializzaStato(idOrdine).then((ordine) => {
+                if (ordine) {
+                    next();
+                } else {
+                    const messaggioErrore = "Ordine non trovato, si prega di verificare l'ID inserito.";
+                    this.inviaErrore(StatusCodes.BAD_REQUEST, CustomErrorTypes.BAD_REQUEST, messaggioErrore, res);
+                }
+            });
+        }
     }
+    
     //metodo che verifica se l'alimento esiste nella lista dell'ordine
     private controlloAlimento = async (req: Request, res: Response, next: NextFunction)=>{
 
@@ -250,6 +261,14 @@ class OrdineController extends BaseController implements Controller {
         this.inviaErrore(StatusCodes.BAD_REQUEST, CustomErrorTypes.BAD_REQUEST, messaggioErrore, res);
 
     }
+
+        //metodo per ottenere lo stato dell'ordine 
+    private getStatoOrdine= async(req: Request, res: Response, next: NextFunction)=>{
+
+        const statoOrdine= await this.ordine.getStatoOrdine()
+        res.send(statoOrdine)
+    }
+    
     
     
      

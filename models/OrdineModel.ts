@@ -61,7 +61,10 @@ class OrdineModel{
 
         return this.stato.aggiornaStatoOrdineCompletato();
     }
-
+    
+    getStatoOrdine(){
+        return this.stato.getStatoOrdine()
+    }
 
     
 
@@ -173,7 +176,22 @@ class OrdineModel{
 
         }) 
         return caricamento
-    }          
+    }
+    
+    
+    async getCaricamentiOrdine() {
+        const caricamenti = await Caricamento.findAll({
+            where: {
+                OrdineId: this.id
+            },
+            attributes: {
+                exclude: ['OrdineId']
+            }
+        });
+    
+        return caricamenti;
+    }
+    
 }
 
 export default OrdineModel;

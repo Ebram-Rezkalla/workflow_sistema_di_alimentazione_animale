@@ -3,6 +3,7 @@ import OrdineState from "../interfaces/ordineState.js";
 import OrdineModel from "./OrdineModel.js";
 import { StatusCodes } from "http-status-codes";
 import StatoOrdine from "./StatoOrdine.js";
+import { Model } from "sequelize";
 
 //classe che gestisce la classe OrdineModel quanto lo stato è IN ESECUZIONE
 
@@ -40,6 +41,18 @@ class StatoOrdineInEsecuzione implements OrdineState {
 
   }
   
+  async getStatoOrdine(){
+    const caricamenti=await this.context.getCaricamentiOrdine()
+
+      const statoOrdine: { Stato: string,Operazioni_di_Carico: Model<any,any>[] } = {
+        Stato: StatoOrdine.InEsecuzione,
+        Operazioni_di_Carico: caricamenti
+      };
+
+      
+      return statoOrdine
+    
+  }
 
 }
 

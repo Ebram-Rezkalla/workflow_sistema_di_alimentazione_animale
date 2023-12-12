@@ -30,6 +30,16 @@ class StatoOrdineFallito implements OrdineState {
       return errorFactory(CustomErrorTypes.BAD_REQUEST)(messaggio)
 
     }
+
+    getStatoOrdine(){
+
+      const statoOrdine: { Stato: string } = {
+        Stato: StatoOrdine.Fallito,
+      };
+      
+      return statoOrdine
+
+    }
   }
 
   export default StatoOrdineFallito;
