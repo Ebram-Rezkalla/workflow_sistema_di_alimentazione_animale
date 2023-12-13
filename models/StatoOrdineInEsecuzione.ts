@@ -44,9 +44,9 @@ class StatoOrdineInEsecuzione implements OrdineState {
   async getStatoOrdine(){
     const caricamenti=await this.context.getCaricamentiOrdine()
 
-      const statoOrdine: { Stato: string,Operazioni_di_Carico: Model<any,any>[] } = {
+      const statoOrdine: { Stato: string,Operazioni_di_Carico: string |Model<any,any>[] } = {
         Stato: StatoOrdine.InEsecuzione,
-        Operazioni_di_Carico: caricamenti
+        Operazioni_di_Carico: caricamenti.length!==0 ? caricamenti:"Non sono state effettuate ancora operazioni di carico"
       };
 
       

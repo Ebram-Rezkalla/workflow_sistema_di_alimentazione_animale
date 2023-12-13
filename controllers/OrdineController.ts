@@ -22,6 +22,9 @@ import StatoOrdine from '../models/StatoOrdine.js';
 import presaInCaricoSchema from '../validation/presaInCaricoSchema.js';
 import caricoSchema from '../validation/caricoSchema.js';
 import dettagliOrdine from '../db/dettagliOrdine.js';
+import verificaDate from '../middlewares/verificaDate.js';
+import verificaFormatoDate from '../middlewares/verificaFormatoDate.js';
+import verificaPrecedenzeDate from '../middlewares/verificaPrecedenzeDate.js';
 
 
 //classe per il controllo degli ordini
@@ -51,6 +54,8 @@ class OrdineController extends BaseController implements Controller {
       this.controlloQuantitàCaricata,this.caricaAlimentoDiUnOrdine,this.controlloCompletamentoOrdine);
 
       this.router.get(`${this.path}/stato/:id`, checkHeader ,verifyAndAuthenticate,this.controlloIdOrdine, this.getStatoOrdine);
+
+      this.router.get(`${this.path}/stati/filter`,verificaDate(false),verificaFormatoDate,verificaPrecedenzeDate, this.getStatoAllOrdini);
     
     }
     
@@ -124,7 +129,7 @@ class OrdineController extends BaseController implements Controller {
     //metodo per prendere in carico un ordine
     private presaInCaricoOrdine=(req: Request, res: Response, next: NextFunction )=>{
 
-        const risposta= this.ordine.presaInCarico()//se il model mio risponde con una stringa la rinvio al cliente
+        const risposta= this.ordine.presaInCarico()//se il model mi risponde con una stringa la rinvio al cliente
             if (typeof risposta === 'string'){
                 const messaggio = {
                     messaggio: risposta
@@ -158,16 +163,13 @@ class OrdineController extends BaseController implements Controller {
     private controlloAlimento = async (req: Request, res: Response, next: NextFunction)=>{
 
         const risposta=await this.ordine.controlloAlimento(req.body.idAlimento)//in base allo stato dell'ordine ottengo la risposta
-            if ( typeof risposta === 'string'){//nel caso che una stringa allora l'ordine non è IN ESECUZIONE oppure l'alimento non è presente nell'ordine
+            if ( typeof risposta === 'string'){//nel caso fosse una stringa allora l'ordine non è IN ESECUZIONE oppure l'alimento non è presente nell'ordine
                 this.inviaErrore(StatusCodes.BAD_REQUEST,CustomErrorTypes.BAD_REQUEST,risposta,res)
 
             }else{
                 next(risposta)
                 
-            }
-
-    
-        
+            }  
     }
     //metodo che controlla se l'alimento è stato caricato o meno
     private controlloStatoCaricamento = async (alimentoOrdine: Model<any,any>,req: Request, res: Response, next: NextFunction)=>{
@@ -214,18 +216,18 @@ class OrdineController extends BaseController implements Controller {
             }
     };
 
-    //metodo per gestire il caricamento di alimento
+    //metodo per gestire il caricamento di un alimento
     private caricaAlimentoDiUnOrdine=async(alimentoOrdine: Model<any, any>,req: Request, res: Response, next: NextFunction)=>{
 
             this.ordine.addOperazioneCaricamento(req.body.idAlimento,req.body.quantità_caricata) //aggiungo un'operazione di caricamento al db
-            this.ordine.changeToCaricatoStatoAlimento(req.body.idAlimento)// cambio lo stato dell'alimento a caricato= true
-            this.mediator.notifyCaricamento(req.body.idAlimento,- req.body.quantità_caricata,-alimentoOrdine.dataValues.quantità_richiesta)//invio una notifica a AlimentoController per aggiornare la disponibilità e la quantità riservata
+            this.ordine.changeToCaricatoStatoAlimento(req.body.idAlimento)// cambio lo stato dell'alimento a caricato = true
+            this.mediator.notifyCaricamento(req.body.idAlimento,- req.body.quantità_caricata,-alimentoOrdine.dataValues.quantità_richiesta)//invio una notifica a AlimentoController per aggiornare la disponibilità e la quantità riservata dell'alimento
             const messaggio: { messaggio: string } = {
                 messaggio: "Caricato " + req.body.quantità_caricata + " Kg di Alimento ID: " + req.body.idAlimento + " relativo all'ordine ID: " + req.body.id
             };
-            next(messaggio)
+            next(messaggio)//passo l'oggetto messaggio al middleware successivo
     }
-        //metodo per controllare se gli alimenti dell'ordine sono stati tutti caricati e di sequenza aggiornare lo stato dell'ordine a Completato 
+        //metodo per controllare se gli alimenti dell'ordine sono stati tutti caricati e di conseguenza aggiornare lo stato dell'ordine a COMPLETATO 
         private controlloCompletamentoOrdine = async (caricamentoRes: { messaggio: string,statoOrdine?:string}, req: Request, res: Response, next: NextFunction) => {
             const alimentiOrdine = await this.ordine.getAlimentiOrdine();
         
@@ -234,9 +236,9 @@ class OrdineController extends BaseController implements Controller {
         
             if (tuttiCaricati) {
                 // Se tutti gli alimenti sono caricati, aggiorno lo stato dell'ordine
-                const risposta = this.ordine.aggiornaStatoOrdineCompletato();
+                const risposta = this.ordine.aggiornaStatoOrdineCompletato();//questo metodo "aggiornaStatoOrdineCompletato" passa la richiesta di aggiornamento alla classe che rappresenta lo stato dell'ordine 
                 if(typeof risposta==='string'){
-                    caricamentoRes.statoOrdine=risposta;
+                    caricamentoRes.statoOrdine=risposta;//aggiungo l'attributo statoOrdine all'oggetto  per poi inviarlo al cliente
                     res.send(caricamentoRes);
                 }else
                 res.status(StatusCodes.BAD_REQUEST).send(risposta)
@@ -248,13 +250,12 @@ class OrdineController extends BaseController implements Controller {
         //metodo per gestire il fallimento di un ordine
     private async fallimentoOrdine(messaggioErrore: string, res:Response){
 
-
         const alimentiDaLiberareQuantità = await this.ordine.getAlimentiOrdineDaLiberare(); // Ricavo gli alimenti dell'ordine che non sono ancora stati caricati così da liberare le quantità riservate in quanto è fallito 
         const ListaAlimentiDaLiberareQuantità: DettagliOrdine[] = alimentiDaLiberareQuantità.map((alimento: Model<any, any>) =>
             new DettagliOrdine(alimento.dataValues.AlimentoId, -alimento.dataValues.quantità_richiesta, alimento.dataValues.sequenza)
         ); //mappo gli alimenti in un oggetto di tipo DettagliOrdine aggiungendo il meno davanti alla quantità richiesta
             console.log(ListaAlimentiDaLiberareQuantità)
-        this.mediator.aggiornaQuantitàRiservata(ListaAlimentiDaLiberareQuantità)//avviso la classe AlimentoController per libera le quantità riservate dall'ordine che è diventato fallito
+        this.mediator.aggiornaQuantitàRiservata(ListaAlimentiDaLiberareQuantità)//avviso la classe AlimentoController per liberare le quantità riservate dall'ordine che è diventato fallito
 
         await this.ordine.aggiornaStatoOrdineToFallito();//aggiorno lo stato dell'ordine
 
@@ -268,10 +269,51 @@ class OrdineController extends BaseController implements Controller {
         const statoOrdine= await this.ordine.getStatoOrdine()
         res.send(statoOrdine)
     }
-    
-    
-    
+    //metodo per ottenere le operazioni di carico relative ad un alimento
+    public async getCaricamentiAlimentoFiltratiByData(idAlimento: number, dataInizio: Date, dataFine: Date):Promise<Model<any, any>[]>{
+
+        const caricamentiAlimentoFiltrati = this.ordine.getCaricamentiAlimentoFiltratiByData(idAlimento,dataInizio,dataFine)
+
+        return caricamentiAlimentoFiltrati
+    }
+
+
+    //metodo per ottenere lo stato di tutti gli ordine filtrato da una data ad un'altra oppure partendo da una data o fino ad una data    
+    private getStatoAllOrdini = async (req: Request, res: Response, next: NextFunction) => {
      
+        const dataInizio = req.query.dataInizio;
+        const dataFine = req.query.dataFine;
+            //creo un oggetto per mandare la risposta al cliente
+        const statoOrdini: {Filtro_applicato:string, Ordini: string | Model<any,any>[]}= {
+            Filtro_applicato: "da: " + req.query.dataInizio + " a: " + req.query.dataFine,
+            Ordini: ''
+        };
+        
+        if (dataInizio && dataFine) {
+            // Se ci sono sia dataInizio che dataFine
+            const dataInizioParsed= new Date(`${dataInizio}T00:00:00.000Z`);
+            const dataFineParsed =new Date(`${dataFine}T23:59:59.999Z`);
+            //chiamo il metodo che filtra da una data ad un'altra
+            statoOrdini.Ordini=await this.ordine.getOrdiniByDateRange(dataInizioParsed, dataFineParsed);
+        } else if (dataInizio) {
+            // Se c'è solo dataInizio
+            const dataInizioParsed= new Date(`${dataInizio}T00:00:00.000Z`);
+            statoOrdini.Filtro_applicato= "dalla data: "+dataInizio
+            //chiamo il metodo che mi filtra partendo da una data
+            statoOrdini.Ordini =await this.ordine.getOrdiniFromDate(dataInizioParsed);
+
+        } else {
+            // Se c'è solo dataFine
+            const dataFineParsed =new Date(`${dataFine}T23:59:59.999Z`);
+            statoOrdini.Filtro_applicato= "fino all data: "+dataFine
+            //chiamo il metodo che filtra fino ad una data 
+            statoOrdini.Ordini = await this.ordine.getOrdiniUntilDate(dataFineParsed);
+        }
+        //sr l'array cche contiene tutti gli ordini è vuoto viene mandata la seguente stringa altrimenti non fa niente
+        statoOrdini.Ordini= statoOrdini.Ordini.length==0 ? "Non ci sono ordini che soddisfano il filtro applicato": statoOrdini.Ordini
+        res.send(statoOrdini)
+    };
+
     //metodo per controllare che non ci sono due numeri duplicati in una lista
     private haDuplicati=(lista: number[]):boolean =>{ return new Set(lista).size < lista.length}
     

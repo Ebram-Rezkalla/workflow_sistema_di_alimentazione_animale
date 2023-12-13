@@ -13,7 +13,7 @@ const Ordine= sequelize.define('Ordine',{
 
   },
   data_creazione:{
-    type: DataTypes.DATEONLY,
+    type: DataTypes.DATE,
     allowNull: false,
   }
   }, {

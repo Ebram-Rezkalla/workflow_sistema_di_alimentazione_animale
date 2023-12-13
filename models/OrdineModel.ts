@@ -3,7 +3,7 @@ import dettagliOrdine from "../db/dettagliOrdine.js";
 import Ordine from "../db/ordine.js"
 import DettagliOrdine from "./DettagliOrdine.js";
 import StatoOrdine from "./StatoOrdine.js";
-import { Model, where } from "sequelize";
+import { Model, Op, where } from "sequelize";
 import OrdineState from "../interfaces/ordineState.js";
 import StatoOrdineCreato from "./StatoOrdineCreato.js";
 import StatoOrdineInEsecuzione from "./StatoOrdineInEsecuzione.js";
@@ -190,6 +190,53 @@ class OrdineModel{
         });
     
         return caricamenti;
+    }
+
+    async getCaricamentiAlimentoFiltratiByData(idAlimento: number, dataInizio: Date, dataFine: Date): Promise<Model<any, any>[]> {
+        const caricamentiAlimentoFiltrati = await Caricamento.findAll({
+            where: {
+                AlimentoId: idAlimento,
+                data_caricamento: {
+                    [Op.between]: [dataInizio, dataFine],
+                },
+            },
+            attributes: {
+                exclude: ['AlimentoId']
+            }
+        });
+            console.log(caricamentiAlimentoFiltrati)
+        return caricamentiAlimentoFiltrati;
+    }
+
+
+    async getOrdiniByDateRange(dataInizio: Date, dataFine: Date) {
+        return await Ordine.findAll({
+            where: {
+                data_creazione: {
+                    [Op.between]: [dataInizio, dataFine]
+                }
+            }
+        });
+    }
+
+    async getOrdiniFromDate(dataInizio: Date) {
+        return await Ordine.findAll({
+            where: {
+                data_creazione: {
+                    [Op.gte]: dataInizio
+                }
+            }
+        });
+    }
+
+    async getOrdiniUntilDate(dataFine: Date) {
+        return await Ordine.findAll({
+            where: {
+                data_creazione: {
+                    [Op.lte]: dataFine
+                }
+            }
+        });
     }
     
 }

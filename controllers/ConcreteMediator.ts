@@ -23,16 +23,24 @@ class ConcreteMediator implements Mediator {
     public async getAlimentiDaAlimentoController(ListaIdAlimentiOrdine: number[]):Promise<Model<any, any>[]> {
         
         return this.alimentoController.getAlimenti(ListaIdAlimentiOrdine)
-     }
+    }
+
         //metodo che aggiorna la quantità riservata di una lista di alimenti
      public aggiornaQuantitàRiservata(alimentiOrdine: DettagliOrdine[]):void{
 
         this.alimentoController.aggiornaQuantitàRiservata(alimentiOrdine);
-     }
+    }
+
      //metodo che notifica il caricamento di un alimento al classe AlimentoController
      public notifyCaricamento(idAlimento:number,quantità_caricata:number,quantità_richiesta:number ):void{
         this.alimentoController.aggiornaQuantitàRiservataAndDisponibilità(idAlimento,quantità_caricata,quantità_richiesta)
-     }
+    }
+
+     public getCaricamentiFiltratiDaOrdineController(idAlimento: number, dataInizio: Date, dataFine: Date):Promise<Model<any, any>[]>{
+
+         return this.ordineController.getCaricamentiAlimentoFiltratiByData(idAlimento,dataInizio,dataFine)
+
+    }
 
 
 }

@@ -7,7 +7,7 @@ import Alimento from './alimento.js';
 //definisco la tabella PresaInCarico per salvare quando è stato preso in carico un ordine
 const PresaInCarico= sequelize.define('presaInCarico',{
     data_preaInCarico:{
-        type: DataTypes.DATEONLY,
+        type: DataTypes.DATE,
         allowNull: false,
       }
   }, {

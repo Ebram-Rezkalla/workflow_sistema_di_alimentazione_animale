@@ -38,7 +38,7 @@ const Caricamento= sequelize.define('Caricamento',{
   }); 
 
 //await dettagliOrdine.sync({ force: true });
-    
+    //relazione Many_To_Many
 Ordine.belongsToMany(Alimento,{through: Caricamento})
 Alimento.belongsToMany(Ordine,{through: Caricamento})
 

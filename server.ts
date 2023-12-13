@@ -17,9 +17,7 @@ const app = new App(
 
 const mediator = new ConcreteMediator(alimentoController, ordineController);
 
-/*app.getServer().get('/', function (req, res) {
-  res.send('Hello sei autenticato');
-});*/
+
 
 app.listen();
 

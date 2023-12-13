@@ -6,7 +6,7 @@ import bodyParser from 'body-parser';
 import errorParsingHandler from './validation/errorParsingHandler.js';
 import ConcreteMediator from './controllers/ConcreteMediator';
 
-//classe che definisce l'applicazione express con middleware controllori
+//classe che definisce l'applicazione express con middleware e controllori
 class App {
     public app: express.Application;
   
@@ -16,7 +16,6 @@ class App {
       this.initializeMiddlewares(); 
       this.initializeControllers(controllers);
 
-     /* this.initializeErrorHandling();*/
     }
 
     public listen() {
@@ -39,9 +38,7 @@ class App {
         controllers.forEach((controller) => {
           this.app.use('/', controller.router);//inizializzo i controllori passandogli Router
         });
-      }
-
-      
+      }    
 }
     
     export default App;

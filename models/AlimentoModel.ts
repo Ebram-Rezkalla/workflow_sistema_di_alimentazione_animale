@@ -28,7 +28,7 @@ class AlimentoModel {
         return rowModificato
     }
 
-    // metodo per scaricare un alimento e aggirnare la sua disponibilità
+    // metodo per scaricare un alimento e aggiornare la sua disponibilità
     async scaricaAlimento(alimento: Model<any, any>,quantità: number){
        await this.addOperazioneScaricamento(alimento.dataValues.id,quantità)
        await this.aggiornaDisponibilitàAlimento(alimento.dataValues.id,quantità)
@@ -72,6 +72,21 @@ class AlimentoModel {
             }
         }
         );
+    }
+
+    async getScaricamentiFiltratiByData(idAlimento:number,dataInizio:Date, dataFine:Date):Promise<Model<any, any>[]>{
+        const scaricamentiFiltrati = await Scaricamento.findAll({
+            where: {
+            id_alimento: idAlimento,
+            data: {
+                [Op.between]: [dataInizio, dataFine],
+            },
+            },
+            attributes: {
+                exclude: ['id_alimento','id']
+            }
+        });
+        return scaricamentiFiltrati
     }
         //metodo che aggiorna la quantità riservata di ogni alimento contenuto in un ordine all'atto della sua creazione 
     async aggiornaQuantitàRiservata(alimentiOrdine: DettagliOrdine[]): Promise<void> {

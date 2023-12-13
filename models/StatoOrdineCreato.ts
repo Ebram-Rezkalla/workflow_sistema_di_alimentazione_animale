@@ -11,7 +11,7 @@ class StatoOrdineCreato implements OrdineState {
       console.log('StatoOrdineCreato: Ordine preso in carico.');
        this.context.addPresaInCarico()
       this.context.aggiornaStatoOrdineToDb(this.context.id,StatoOrdine.InEsecuzione )
-      this.context.transizione(StatoOrdine.InEsecuzione);
+      this.context.transizione(StatoOrdine.InEsecuzione);//cambio lo stato della classe OrdineModel
       const messaggio : string = "l'ordine è stato preso in carico, il nuovo stato dell'ordine è "+ StatoOrdine.InEsecuzione
     
         return messaggio

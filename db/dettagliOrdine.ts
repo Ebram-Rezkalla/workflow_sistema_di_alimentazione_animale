@@ -43,7 +43,7 @@ const dettagliOrdine= sequelize.define('dettagliOrdine',{
   }); 
 
 //await dettagliOrdine.sync({ force: true });
-    
+       //relazione Many_To_Many 
 Ordine.belongsToMany(Alimento,{through: dettagliOrdine})
 Alimento.belongsToMany(Ordine,{through: dettagliOrdine})
 

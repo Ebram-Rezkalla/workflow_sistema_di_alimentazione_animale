@@ -21,7 +21,7 @@ const Scaricamento= sequelize.define('Scaricamento',{
     allowNull: false
   },
   data:{
-    type:DataTypes.DATEONLY,
+    type:DataTypes.DATE,
     allowNull: false 
   }
  }, {
